@@ -9,5 +9,5 @@ machine code on each line.
 The assembly code is outputted on the console.
 
 ### Executing 
-``` g++ main.cpp --std=c++11 
-./a.out ```
+``` g++ main.cpp --std=c++11 ```
+```./a.out ```
