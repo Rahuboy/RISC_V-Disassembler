@@ -1,3 +1,5 @@
+// Code by Rahul Ramachandran (cs21btech11049)
+
 #include <iostream>
 #include <stdlib.h>
 #include <string>
@@ -264,9 +266,6 @@ void parser(Instruction i)
 
     cout<<final_inst<<endl;
 }
-
-
-
 
 
 
