@@ -7,6 +7,8 @@
 
 using namespace std;
 
+#define LINE_DIFF 4
+
 //instruction_type:
 // 0 for R-Format
 // 1 for I-Format
@@ -76,6 +78,30 @@ int imm_finder_j(string bstring)
     string imm_first_bit = bstring.substr(0, 1);
     int imm_j = strtoull(imm_first_bit.c_str(), NULL, 2)*(-1)*(1<<20) + strtoull(imm.c_str(), NULL, 2)*(1<<1);
     return imm_j;
+}
+
+
+void labeller(int no_of_lines, Instruction i)
+{
+    int imm;
+    if(i.instruction_type == 5) imm = imm_finder_b(i.bstring);
+    else if(i.instruction_type == 6) imm = imm_finder_j(i.bstring);
+    else return;
+    imm /= LINE_DIFF;
+    if(i.index + imm < 0 || i.index + imm >= no_of_lines) i.label = -2;
+    else
+    {
+        if(v_inst[i.index + imm].labelled >= 0)
+        {
+            v_inst[i.index].label = v_inst[i.index + imm].labelled;
+        }
+        else
+        {
+            v_inst[i.index].label = label_number;
+            v_inst[i.index + imm].labelled = label_number++;
+        }
+    }
+
 }
 
 
@@ -212,14 +238,16 @@ void parser(Instruction i)
         {
             cout<<"Illegal instruction!"; return;
         }   
-        final_inst += operation + " " + "x" + rs1 + ", " + "x" + rs2 + ", " + to_string(imm_b);
+        if(i.label == -2) final_inst += operation + " " + "x" + rs1 + ", " + "x" + rs2 + ", " + to_string(i.label);
+        else final_inst += operation + " " + "x" + rs1 + ", " + "x" + rs2 + ", L" + to_string(i.label);
     }
 
     else if(i.instruction_type == 6)
     {
         int imm_j = imm_finder_j(i.bstring);
         operation = "jal";
-        final_inst += operation + " " + "x" + rd + ", " + to_string(imm_j);
+        if(i.label == -2) final_inst += operation + " " + "x" + rd + ", " + to_string(i.label);
+        else final_inst += operation + " " + "x" + rd + ", L" + to_string(i.label);
     }
 
     else if(i.instruction_type == 7)
@@ -261,6 +289,7 @@ int main()
 
         no_of_lines++;
     }
+    for(int i = 0; i < no_of_lines; i++) labeller(no_of_lines, v_inst[i]);
     for(int i = 0; i < no_of_lines; i++) parser(v_inst[i]);
     file_input.close();
 
