@@ -27,7 +27,7 @@ struct instruction
     string bstring;
     int instruction_type;
     int labelled; // label is Ln: if label = n>=0, -1 otherwise
-    int label; // label is Ln if label = n>0, -1 if no label in instruction
+    int label; // label is Ln if label = n>0, -1 if no label in instruction, -2 if label present but outside bounds
 };
 
 typedef struct instruction Instruction;
@@ -54,6 +54,31 @@ int instruction_type_finder(string bstring)
     else if(opcode == "0110111") return 7;
     else return -1;
 }
+
+int imm_finder_b(string bstring)
+{
+    string imm = "";
+    imm += bstring[31-7];
+    imm += bstring.substr(31-30, 6) + bstring.substr(31-11,4); //imm has all bits except first bit
+
+    string imm_first_bit = bstring.substr(0, 1);
+    int imm_b = strtoull(imm_first_bit.c_str(), NULL, 2)*(-1)*(1<<12) + strtoull(imm.c_str(), NULL, 2)*(1<<1);
+    return imm_b;
+}
+
+int imm_finder_j(string bstring)
+{
+    string imm = "";
+    imm += bstring.substr(31-19, 8);
+    imm += bstring[31-20];
+    imm += bstring.substr(31-30,10);
+
+    string imm_first_bit = bstring.substr(0, 1);
+    int imm_j = strtoull(imm_first_bit.c_str(), NULL, 2)*(-1)*(1<<20) + strtoull(imm.c_str(), NULL, 2)*(1<<1);
+    return imm_j;
+}
+
+
 
 void parser(Instruction i)
 {
@@ -118,7 +143,7 @@ void parser(Instruction i)
         else if(funct3 == 7) operation = "andi";
         else if(funct3 == 1 && funct6 == 0) operation = "slli";
         else if(funct3 == 5 && funct6 == 0) operation = "srli";
-        else if(funct3 == 5 && funct6 != 0) operation = "srai";
+        else if(funct3 == 5 && funct6 == 16) operation = "srai"; //imm[11:6] == 010000
         else
         {
             cout<<"Illegal instruction!"; return;
@@ -127,8 +152,93 @@ void parser(Instruction i)
         else final_inst += operation + " " + "x" + rd + ", " + "x" + rs1 + ", " + to_string(imm_i_shift);
     }
 
+
+    else if(i.instruction_type == 2 || i.instruction_type == 3)
+    {
+        if(i.instruction_type == 2)
+        {
+            if(funct3 == 0) operation = "lb";
+            else if(funct3 == 1) operation = "lh";
+            else if(funct3 == 2) operation = "lw";
+            else if(funct3 == 3) operation = "ld";
+            else if(funct3 == 4) operation = "lbu";
+            else if(funct3 == 5) operation = "lhu";
+            else if(funct3 == 6) operation = "lwu";
+            else
+            {
+                cout<<"Illegal instruction!"; return;
+            }
+        }
+        else
+        {
+            if(funct3 == 0) operation = "jalr";
+            else
+            {
+                cout<<"Illegal instruction!"; return;
+            }
+        }
+        final_inst += operation + " " + "x" + rd + ", " + to_string(imm_i) + "(x" + rs1 + ")";
+    }
+
+
+    else if(i.instruction_type == 4)
+    {
+        int imm_s_top = strtoull(str_thfirst_bit.c_str(), NULL, 2)*(-1)*(1<<11) + strtoull((i.bstring.substr(31-30,6)).c_str(), NULL, 2)*(1<<5); //the immediate for I-Format
+        int imm_s = imm_s_top + stoi(rd);
+
+        if(funct3 == 0) operation = "sb";
+        else if(funct3 == 1) operation = "sh";
+        else if(funct3 == 2) operation = "sw";
+        else if(funct3 == 3) operation = "sd";
+        else
+        {
+            cout<<"Illegal instruction!"; return;
+        }   
+        final_inst += operation + " " + "x" + rs2 + ", " + to_string(imm_s) + "(x" + rs1 + ")";
+    }
+
+
+    else if(i.instruction_type == 5)
+    {
+        int imm_b = imm_finder_b(i.bstring);
+
+        if(funct3 == 0) operation = "beq";
+        else if(funct3 == 1) operation = "bne";
+        else if(funct3 == 4) operation = "blt";
+        else if(funct3 == 5) operation = "bge";
+        else if(funct3 == 6) operation = "bltu";
+        else if(funct3 == 7) operation = "bgeu";
+        else
+        {
+            cout<<"Illegal instruction!"; return;
+        }   
+        final_inst += operation + " " + "x" + rs1 + ", " + "x" + rs2 + ", " + to_string(imm_b);
+    }
+
+    else if(i.instruction_type == 6)
+    {
+        int imm_j = imm_finder_j(i.bstring);
+        operation = "jal";
+        final_inst += operation + " " + "x" + rd + ", " + to_string(imm_j);
+    }
+
+    else if(i.instruction_type == 7)
+    {
+        string imm_first_bit_u = "";
+        imm_first_bit_u += i.bstring[0];
+        string imm_lower_u = i.bstring.substr(31-30, 19);
+        operation = "lui";
+        int imm_u = strtoull(imm_first_bit_u.c_str(), NULL, 2)*(-1)*(1<<19) + strtoull(imm_lower_u.c_str(), NULL, 2);
+        final_inst += operation + " " + "x" + rd + ", " + to_string(imm_u);
+    }
+
+
+
     cout<<final_inst<<endl;
 }
+
+
+
 
 
 
