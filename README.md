@@ -7,3 +7,7 @@ inputs to the corresponding RISC-V assembly code.
 The code expects a text file 'input.txt' as input with hexadecimal 
 machine code on each line.
 The assembly code is outputted on the console.
+
+### Executing 
+``` g++ main.cpp --std=c++11 
+./a.out ```
